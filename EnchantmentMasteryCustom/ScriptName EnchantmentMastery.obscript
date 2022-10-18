@@ -1,0 +1,805 @@
+ScriptName EnchantmentMastery
+
+Short EMReady
+Short EMStarted
+Short EMAllowItemEnchant
+Short EMRevertItems
+Short EMIdenticalEffect
+Short EMMerged
+Long EMSlotMask
+Long EMMysticism
+Long EMScriptEffectCode
+Ref EMConstantItem
+Short EMConstantItemAmount
+Ref EMScriptEnchantment
+Ref EMWeaponEffect
+Short EMSuccess
+Float EMSuccessCalc
+Short EMME
+
+Ref EMDisenchantEffect1
+Ref EMDisenchantEffect2
+String_Var EMDisenchantEffectName
+String_Var EMDisenchantEffectIcon
+String_Var EMDisenchantEffectModel
+Short EMDisenchantEffectEnchanting
+Short EMDisenchantEffectMagnitude
+Short EMDisenchantEffectDuration
+Short EMDisenchantEffectArea
+
+Long EMWeaponDamage
+Short EMWeaponIgnores
+Float EMWeaponSpeed
+Float EMWeaponReach
+Short EMWeaponType
+Float EMWeaponWeight
+Long EMWeaponValue
+Long EMWeaponHealth
+Long EMArrowNumber
+
+Array_Var EMItems
+Array_Var EMNewItems
+Array_Var EMProperties
+Short EMItemCounter
+Short EMNumberOfItems
+
+Ref EMTempItem
+Ref EMTempEnchantment
+Short EMTempEnchantments
+Short EMTempCounter
+Long EMTempCharge
+String_Var EMTempEffectName
+Float EMMagnitudeTemp
+Short EMAreaTemp
+Short EMDurationTemp
+Short EMRangeTemp
+Short EMTempEffectCode
+Short EMTempItemAmount
+Short EMTempQuestItem
+
+Ref EMNewItem
+Ref EMNewEnchantment
+Short EMNewEnchantments
+Short EMNewCounter
+Long EMNewCharge
+String_Var EMNewEffectName
+Float EMMagnitudeNew
+Short EMAreaNew
+Short EMDurationNew
+Short EMRangeNew
+Short EMNewEffectCode
+Short EMNewItemAmount
+Short EMNewEffectActorValue
+Short EMTempEffectActorValue
+Float fQuestDelayTime
+
+Begin GameMode
+	If (GetGameRestarted)
+		If (GetOBSEVersion < 17)
+			MessageBox "Enchantment Mastery Requires OBSE 0017 Or Newer! Please Update OBSE!"
+		Else
+			set fQuestDelayTime to 0.5
+			RunBatchScript "data\EnchantmentMastery.ini"
+			
+			Let EMTempEnchantment := 0
+			Let EMTempEnchantments := 0
+			;Let EMTempEffectName := " "
+			Let EMTempCharge := 0
+			Let EMMagnitudeTemp := 0
+			Let EMAreaTemp := 0
+			Let EMDurationTemp := 0
+			Let EMRangeTemp := 0
+			Let EMTempEffectCode := 0
+			Let EMTempItemAmount := 0
+			
+			Let EMNewEnchantment := 0
+			Let EMNewEnchantments := 0
+			;Let EMNewEffectName := " "
+			Let EMNewCharge := 0
+			Let EMMagnitudeNew := 0
+			Let EMAreaNew := 0
+			Let EMDurationNew := 0
+			Let EMRangeNew := 0
+			Let EMNewEffectCode := 0
+			Let EMNewItemAmount := 0
+			
+			Let EMConstantItem := 0
+			Let EMConstantItemAmount := 0
+			
+			Let EMScriptEnchantment := 0
+			Let EMScriptEffectCode := 0
+			;Let EMScriptEffectCode := GetMagicEffectCode "SEFF"
+			
+			Let EMMysticism := 0
+			Let EMMerged := 0
+			Let EMIdenticalEffect := 0
+			Let EMWeaponEffect := 0
+			Let EMSuccess := 0
+			Let EMSuccessCalc := 0
+			Let EMME := 0
+			
+			Let EMDisenchantEffect1 := 0
+			Let EMDisenchantEffect2 := 0
+			;Let EMDisenchantEffectName := " "
+			;Let EMDisenchantEffectIcon := " "
+			;Let EMDisenchantEffectModel := " "
+			Let EMDisenchantEffectEnchanting := 0
+			Let EMDisenchantEffectMagnitude := 0
+			Let EMDisenchantEffectDuration := 0
+			Let EMDisenchantEffectArea := 0
+			
+			Let EMWeaponDamage := 0
+			Let EMWeaponIgnores := 0
+			Let EMWeaponSpeed := 0
+			Let EMWeaponReach := 0
+			Let EMWeaponType := 0
+			Let EMWeaponWeight := 0
+			Let EMWeaponValue := 0
+			Let EMWeaponHealth := 0
+			Let EMArrowNumber := 0
+			
+			If (EMRevertItems != -1 && EMRevertItems != 1)
+				Let EMRevertItems := 0
+			EndIf
+			Let EMStarted := 1
+			
+			Print "Enchantment Mastery: Initialized!"
+		EndIf
+	EndIf
+End
+
+Begin MenuMode 1042
+	If (GetOBSEVersion >= 17 && EMRevertItems == 0 && EMStarted == 1)
+		set fQuestDelayTime to .1 ;setting ultralow delaytime for menus
+		If (EMDEBUG == 1)
+			Print "Enchantment Mastery: Preparing To Enchant Items!"
+		EndIf
+		Let EMRevertItems := -1
+		Let EMScriptEffectCode := GetMagicEffectCode "SEFF" ;Moved out of initializer script to avoid bloat
+		DisableMouse
+		DisablePlayerControls
+		;CloseAllMenus
+		Let EMItems := Player.GetItems 20 22 33 34 43 
+		Let EMNewItems := ar_Copy EMItems
+		Let EMProperties := ar_Construct Array
+		Let EMMysticism := Player.GetActorValue Mysticism
+		Let EMNumberOfItems := ar_Size EMItems
+		Let EMItemCounter := 0
+		While (EMItemCounter < EMNumberOfItems)
+			Let EMTempItem := EMItems[EMItemCounter]
+			Let EMTempEnchantment := 0
+			Let EMTempEnchantment := GetEnchantment EMTempItem
+			Let EMTempCharge := 0
+			Let EMTempCharge := GetObjectCharge EMTempItem
+			Let EMProperties[EMItemCounter] := ar_Construct StringMap
+			Let EMProperties[EMItemCounter]["enchantment"] := 0
+			Let EMProperties[EMItemCounter]["count"] := Player.GetItemCount EMTempItem
+			Let EMProperties[EMItemCounter]["enchantment"] := EMTempEnchantment
+			Let EMProperties[EMItemCounter]["charge"] := EMTempCharge
+			Let EMProperties[EMItemCounter]["duplicated"] := 0
+			Let EMProperties[EMItemCounter]["weapon"] := 0
+			Let EMProperties[EMItemCounter]["clean"] := 0
+			Let EMProperties[EMItemCounter]["quest"] := IsQuestItem EMTempItem
+			Let EMTempQuestItem := IsQuestItem EMTempItem
+			Let EMTempEnchantments := GetMagicItemEffectCount EMTempEnchantment
+			Let EMAllowItemEnchant := 0
+			If (EMDM || ((EMMysticism >= 100 && EMTempEnchantments < EMME5) || (EMMysticism >= 75 && EMTempEnchantments < EMME4) || (EMMysticism >= 50 && EMTempEnchantments < EMME3) || (EMMysticism >= 25 && EMTempEnchantments < EMME2) || (EMTempEnchantments < EMME1) || (EMCE == 1 && IsWeapon EMTempItem)))
+				Let EMAllowItemEnchant := 1
+			EndIf
+			If (EMTempQuestItem == 1)
+					SetQuestItem 0 EMTempItem
+					SetQuestItem 0 EMNewItem
+			EndIf
+			If (EMAllowItemEnchant == 1 && (EMTempEnchantment != 0 || (EMCE == 1 && IsWeapon EMTempItem) || (EMEA == 1 && IsAmmo EMTempItem)))
+				If (EMDEBUG == 1)
+					Let EMNewEffectName := GetName EMTempItem
+					Print "Enchantment Mastery: Preparing Item " + EMNewEffectName
+				EndIf
+				If (EMTempEnchantment == 0)
+					Let EMProperties[EMItemCounter]["clean"] := 1
+				EndIf
+				Let EMProperties[EMItemCounter]["duplicated"] := 1
+				Let EMNewItem := CloneForm EMTempItem
+				Let EMNewEnchantment := RemoveEnchantment EMNewItem
+				If (EMEA == 1 && IsAmmo EMTempItem == 1)
+					Let EMConstantItem := EnchantmentMasteryWeapon
+					Let EMConstantItem := CloneForm EMConstantItem
+					CopyName EMNewItem EMConstantItem
+					CopyIconPath EMTempItem EMConstantItem
+					CopyMaleIconPath EMTempItem EMConstantItem
+					CopyFemaleIconPath EMTempItem EMConstantItem
+					CopyModelPath EMTempItem EMConstantItem
+					CopyMaleBipedPath EMTempItem EMConstantItem
+					CopyFemaleBipedPath EMTempItem EMConstantItem
+					CopyMaleGroundPath EMTempItem EMConstantItem
+					CopyFemaleGroundPath EMTempItem EMConstantItem
+					Let EMNewItem := CloneForm EMConstantItem
+				EndIf
+				Player.AddItemNS EMNewItem 1
+				Let EMNewItems[EMItemCounter] := 0
+				Let EMNewItems[EMItemCounter] := EMNewItem
+				If (EMCE == 1 && IsWeapon EMTempItem == 1 && IsAmmo EMTempItem == 0)
+					Let EMConstantItem := EnchantmentMasteryItem
+					Let EMConstantItem := CloneForm EMConstantItem
+					CopyName EMNewItem EMConstantItem
+					CopyIconPath EMTempItem EMConstantItem
+					CopyMaleIconPath EMTempItem EMConstantItem
+					CopyFemaleIconPath EMTempItem EMConstantItem
+					CopyModelPath EMTempItem EMConstantItem
+					CopyMaleBipedPath EMTempItem EMConstantItem
+					CopyFemaleBipedPath EMTempItem EMConstantItem
+					CopyMaleGroundPath EMTempItem EMConstantItem
+					CopyFemaleGroundPath EMTempItem EMConstantItem
+					Let EMTempEffectName := GetName EMTempItem
+					Let EMTempEffectName := "(Const.) " + EMTempEffectName
+					SetNameEx "%z" EMTempEffectName EMConstantItem
+					Let EMNewItem := CloneForm EMConstantItem
+					Let EMProperties[EMItemCounter]["weapon"] := EMNewItem
+					If (EMTempEnchantments == 0)
+						Player.RemoveItemNS EMTempItem 1
+					EndIf
+					Player.AddItemNS EMNewItem 1
+				EndIf
+			EndIf
+			Let EMItemCounter := EMItemCounter + 1
+		Loop
+		Player.AddSpellNS EnchantmentMasteryDisenchantSpell
+		Let EMDisenchantEffect1 := MagicEffectFromChars "DARK"
+		Let EMDisenchantEffectName := GetMagicEffectName EMDisenchantEffect1
+		Let EMDisenchantEffectIcon := GetMagicEffectIcon EMDisenchantEffect1
+		Let EMDisenchantEffectModel := GetMagicEffectModel EMDisenchantEffect1
+		Let EMDisenchantEffectEnchanting := IsMagicEffectForEnchanting EMDisenchantEffect1
+		Let EMDisenchantEffectMagnitude := MagicEffectHasNoMagnitude EMDisenchantEffect1
+		Let EMDisenchantEffectDuration := MagicEffectHasNoDuration EMDisenchantEffect1
+		Let EMDisenchantEffectArea := MagicEffectHasNoArea EMDisenchantEffect1
+		SetMagicEffectName "Disenchant" EMDisenchantEffect1
+		SetMagicEffectForEnchanting 1 EMDisenchantEffect1
+		SetMagicEffectNoMagnitude 0 EMDisenchantEffect1
+		SetMagicEffectNoDuration 0 EMDisenchantEffect1
+		SetMagicEffectNoArea 1 EMDisenchantEffect1
+		Let EMDisenchantEffect2 := MagicEffectFromChars "DIAR" ; DSPL, SEFF
+		Let EMTempEffectName := GetMagicEffectIcon EMDisenchantEffect2
+		SetMagicEffectIcon EMTempEffectName EMDisenchantEffect1
+		Let EMTempEffectName := GetMagicEffectModel EMDisenchantEffect2
+		SetMagicEffectModel EMTempEffectName EMDisenchantEffect1
+		CopyIconPath EMDisenchantEffect2 EMDisenchantEffect1
+		set EMTempEffectName to sv_Destruct
+		set EMNewEffectName to sv_Destruct
+		set EMDisenchantEffectName to sv_Destruct
+		set EMDisenchantEffectIcon to sv_Destruct
+		set EMDisenchantEffectModel to sv_Destruct
+		;ShowEnchantment
+		EnableMouse
+		;EnablePlayerControls
+		Let EMRevertItems := 1
+		If (EMDEBUG == 1)
+			Print "Enchantment Mastery: Items Are Ready To Be Enchanted!"
+		EndIf
+		;Message "EM: Ready To Enchant!"
+		Let EMReady := 1
+	EndIf
+End
+
+Begin GameMode
+	If (GetOBSEVersion >= 17 && EMRevertItems == 1 && EMStarted == 1 && EMReady == 1)
+		If (EMDEBUG == 1)
+			Print "Enchantment Mastery: Preparing To Merge Items!"
+		EndIf
+		Let EMRevertItems := -1
+		DisableMouse
+		; DisablePlayerControls
+		Let EMSuccess := 0
+		Let EMItemCounter := 0
+		While (EMItemCounter < EMNumberOfItems)
+			If eval (EMProperties[EMItemCounter]["duplicated"] == 1)
+				Let EMTempItem := EMItems[EMItemCounter]
+				Let EMNewItem := EMNewItems[EMItemCounter]
+				Let EMNewItemAmount := Player.GetItemCount EMNewItem
+				Let EMConstantItem := EMProperties[EMItemCounter]["weapon"]
+				If (EMConstantItem != 0)
+					Let EMConstantItemAmount := Player.GetItemCount EMConstantItem
+				Else
+					Let EMConstantItemAmount := 0
+				EndIf
+				If eval (EMProperties[EMItemCounter]["quest"] == 1)
+					SetQuestItem 1 EMTempItem
+					SetQuestItem 1 EMNewItem
+					SetQuestItem 1 EMConstantItem
+				EndIf
+				If (EMNewItemAmount == 0)
+					If (EMConstantItem != 0)
+						Player.RemoveItemNS EMConstantItem 1
+					EndIf
+					Let EMNewItem := GetLastEnchantedItem
+					Let EMNewEnchantment := GetEnchantment EMNewItem
+					Let EMNewCharge := GetObjectCharge EMNewItem
+					If (EMEA == 1 && IsAmmo EMTempItem) ; This block handles arrow enchanting
+						If (MagicItemHasEffect "DARK" EMNewEnchantment)
+							Let EMNewCounter := 0
+							Let EMNewEnchantments := GetMagicItemEffectCount EMNewEnchantment
+							Let EMTempEffectCode := GetMagicEffectCode "DARK"
+							While (EMNewCounter < EMNewEnchantments)
+								Let EMNewEffectCode := GetNthEffectItemCode EMNewEnchantment EMNewCounter
+								If (EMNewEffectCode == EMTempEffectCode)
+									Let EMArrowNumber := GetNthEffectItemMagnitude EMNewEnchantment 
+								EndIf
+								Let EMNewCounter := EMNewCounter + 1
+							Loop
+						Else
+							Let EMArrowNumber := GetEnchantmentCost EMNewEnchantment
+							Let EMArrowNumber := EMNewCharge / EMArrowNumber
+							Let EMArrowNumber := EMArrowNumber * EMAM
+						EndIf
+						If eval (EMProperties[EMItemCounter]["count"] < EMArrowNumber)
+							Let EMArrowNumber := EMProperties[EMItemCounter]["count"]
+						EndIf
+						If (EMDEBUG == 1)
+							Let EMTempEffectName := GetName EMNewItem
+							Let EMNewEffectName := ToString EMArrowNumber
+							PrintToConsole "Enchantment Mastery: Enchanting %z %z (Arrows)!" EMNewEffectName EMTempEffectName
+						EndIf
+						Let EMConstantItem := CloneForm EMTempItem
+						CopyName EMNewItem EMConstantItem
+						Let EMTempEnchantment := CloneForm EMNewEnchantment
+						SetEnchantment EMTempEnchantment EMConstantItem
+						Player.RemoveItemNS EMNewItem 1
+						Let EMNewItem := CloneForm EMConstantItem
+						Let EMNewEnchantment := GetEnchantment EMNewItem
+						Let EMNewCharge := GetObjectCharge EMNewItem
+						If eval (EMProperties[EMItemCounter]["quest"] == 1)
+							SetQuestItem 1 EMTempItem
+							SetQuestItem 1 EMConstantItem
+							SetQuestItem 1 EMNewItem
+						EndIf
+						Player.AddItemNS EMNewItem 1
+					Else
+						Let EMArrowNumber := 1
+						If (EMDEBUG == 1)
+							Let EMTempEffectName := GetName EMTempItem
+							PrintToConsole "Enchantment Mastery: Merging Multiple Effects Unto %q%z%q" EMTempEffectName
+						EndIf
+					EndIf
+					Let EMTempEnchantment := EMProperties[EMItemCounter]["enchantment"]
+					Let EMTempCharge := EMProperties[EMItemCounter]["charge"]
+					If (EMEA == 1 && IsAmmo EMTempItem)
+						Let EMNewEnchantment := EMTempEnchantment
+						Let EMTempEnchantment := CloneForm EMNewEnchantment
+						Let EMNewEnchantment := GetEnchantment EMNewItem
+					EndIf
+					If (MagicItemHasEffect "DARK" EMNewItem == 0)
+						CopyAllEffectItems EMNewEnchantment EMTempEnchantment
+					EndIf
+					Let EMNewEnchantment := CloneForm EMTempEnchantment
+					RemoveAllEffectItems EMNewEnchantment
+					Let EMTempEnchantments := GetMagicItemEffectCount EMTempEnchantment
+					Let EMTempCounter := 0
+					If (EMDEBUG == 1)
+						Let EMTempEffectName := ToString EMTempEnchantments
+						PrintToConsole "Enchantment Mastery: Total Of %z Enchantments To Be Merged" EMTempEffectName
+					EndIf
+					While (EMTempCounter < EMTempEnchantments)
+						Let EMTempEffectCode := GetNthEffectItemCode EMTempEnchantment EMTempCounter
+						If eval (EMTempEffectCode != EMScriptEffectCode && MagicItemHasEffectCode EMTempEffectCode EMNewEnchantment == 1)
+							Let EMTempEffectName := GetNthEffectItemName EMTempEnchantment EMTempCounter
+							Let EMMagnitudeTemp := GetNthEffectItemMagnitude EMTempEnchantment EMTempCounter
+							Let EMDurationTemp := GetNthEffectItemDuration EMTempEnchantment EMTempCounter
+							Let EMAreaTemp := GetNthEffectItemArea EMTempEnchantment EMTempCounter
+							Let EMTempEffectActorValue := GetNthEffectItemActorValue EMTempEnchantment EMTempCounter ; this line is added
+							Let EMMerged := 0
+							Let EMNewCounter := 0
+							Let EMNewEnchantments := GetMagicItemEffectCount EMNewEnchantment
+							While (EMNewCounter < EMNewEnchantments)
+								Let EMNewEffectName := GetNthEffectItemName EMNewEnchantment EMNewCounter
+								Let EMNewEffectCode := GetNthEffectItemCode EMNewEnchantment EMNewCounter ; this line is added
+								Let EMNewEffectActorValue := GetNthEffectItemActorValue EMNewEnchantment EMNewCounter ; this line is added
+								Let EMAreaNew := GetNthEffectItemArea EMNewEnchantment EMNewCounter
+								Let EMDurationNew := GetNthEffectItemDuration EMNewEnchantment EMNewCounter
+								Let EMMagnitudeNew := GetNthEffectItemMagnitude EMNewEnchantment EMNewCounter
+								Let EMIdenticalEffect := sv_Compare "%z" EMTempEffectName EMNewEffectName
+								If (EMMerged == 0 && EMNewEffectCode == EMTempEffectCode && EMNewEffectActorValue == EMTempEffectActorValue) ; && EMIdenticalEffect == 0 ; after && is added
+									Let EMMagnitudeNew := EMMagnitudeNew + ((EMMM / 100.0) * EMMagnitudeTemp) ; added emmagnew portion
+									Let EMDurationNew := EMDurationNew + EMDurationTemp ; (EMDurationNew * EMMagnitudeNew + EMDurationTemp * EMMagnitudeTemp) / ((EMMagnitudeNew + EMMagnitudeTemp) + 1)
+									Let EMAreaNew := EMAreaNew + EMAreaTemp ; (EMAreaNew * EMMagnitudeNew + EMAreaTemp * EMMagnitudeTemp) / ((EMMagnitudeNew + EMMagnitudeTemp) + 1) ;avoiding divide by zero
+									SetNthEffectItemMagnitude EMMagnitudeNew EMNewEnchantment EMNewCounter
+									SetNthEffectItemDuration EMDurationNew EMNewEnchantment EMNewCounter
+									SetNthEffectItemArea EMAreaNew EMNewEnchantment EMNewCounter
+									SetNthEffectItemActorValueC EMNewEffectActorValue EMNewEnchantment EMNewCounter ; this line is added
+									;Let EMMerged := AddFullEffectItemC EMScriptEffectCode 0 0 0 0 EMNewEnchantment
+									;SetNthEffectItemscriptName "Combined Enchantments" EMNewEnchantment EMMerged
+									Let EMMerged := 1
+								EndIf
+								Let EMNewCounter := EMNewCounter + 1
+							Loop
+							If (EMMerged == 0)
+								If (GetWeaponType EMNewItem == 4)
+									If (EMDEBUG == 1)
+										Print "Enchantment Mastery: Adding Enchantments Unto A Staff"
+									EndIf
+									Let EMTempEffectCode := GetNthEffectItemCode EMTempEnchantment EMTempCounter
+									Let EMMagnitudeTemp := GetNthEffectItemMagnitude EMTempEnchantment EMNewCounter
+									Let EMAreaTemp := GetNthEffectItemArea EMTempEnchantment EMNewCounter
+									Let EMDurationTemp := GetNthEffectItemDuration EMTempEnchantment EMNewCounter
+									AddFullEffectItemC EMTempEffectCode EMMagnitudeTemp EMAreaTemp EMDurationTemp 2 EMNewEnchantment
+								Else
+									CopyNthEffectItem EMTempEnchantment EMNewEnchantment EMTempCounter
+								EndIf
+							EndIf
+						Else
+							If (GetWeaponType EMNewItem == 4)
+								If (EMDEBUG == 1)
+									Print "Enchantment Mastery: Adding Enchantments Unto A Staff"
+								EndIf
+								Let EMTempEffectCode := GetNthEffectItemCode EMTempEnchantment EMTempCounter
+								Let EMMagnitudeTemp := GetNthEffectItemMagnitude EMTempEnchantment EMNewCounter
+								Let EMAreaTemp := GetNthEffectItemArea EMTempEnchantment EMNewCounter
+								Let EMDurationTemp := GetNthEffectItemDuration EMTempEnchantment EMNewCounter
+								AddFullEffectItemC EMTempEffectCode EMMagnitudeTemp EMAreaTemp EMDurationTemp 2 EMNewEnchantment
+							Else
+								CopyNthEffectItem EMTempEnchantment EMNewEnchantment EMTempCounter
+							EndIf
+						EndIf
+						Let EMTempCounter := EMTempCounter + 1
+					Loop
+					If (GetWeaponType EMNewItem == 4)
+						If (EMDEBUG == 1)
+							Print "Enchantment Mastery: Adding Enchantments Unto A New Staff"
+						EndIf
+						Let EMNewEnchantment := EnchantmentMasteryBlankStaffEnchantment
+						Let EMTempEnchantment := CloneForm EMNewEnchantment
+						Let EMConstantItem := GetLastEnchantedItem
+						Let EMNewEnchantment := GetEnchantment EMConstantItem
+						Let EMNewCharge := GetObjectCharge EMConstantItem
+						Let EMTempCounter := 0
+						Let EMTempEnchantments := GetMagicItemEffectCount EMNewEnchantment
+						While (EMTempCounter < EMTempEnchantments)
+							Let EMTempEffectCode := GetNthEffectItemCode EMNewEnchantment EMTempCounter
+							Let EMMagnitudeTemp := GetNthEffectItemMagnitude EMNewEnchantment EMTempCounter
+							Let EMAreaTemp := GetNthEffectItemArea EMNewEnchantment EMTempCounter
+							Let EMDurationTemp := GetNthEffectItemDuration EMNewEnchantment EMTempCounter
+							AddFullEffectItemC EMTempEffectCode EMMagnitudeTemp EMAreaTemp EMDurationTemp 2 EMTempEnchantment
+							Let EMTempCounter := EMTempCounter + 1
+						Loop
+					Else
+						Let EMTempEnchantment := CloneForm EMNewEnchantment
+					EndIf
+					SetEnchantment EMTempEnchantment EMNewItem
+					If eval (EMProperties[EMItemCounter]["clean"] == 0)
+						Let EMNewCharge := EMTempCharge + ((EMSC / 100.0) * EMNewCharge)
+					EndIf
+					If (EMDEBUG == 1)
+						Print "Enchantment Mastery: New Charge = " + ToString EMNewCharge
+					EndIf
+					SetObjectCharge EMNewCharge EMNewItem
+					If (EMDM == 1) ; block for handling dangerous magic
+						If (EMDEBUG == 1)
+							Print "Enchantment Mastery: Dangerous Magic: Determining Success Rate!"
+						EndIf
+						If (EMMysticism >= 100)
+							Let EMME := EMME5
+						ElseIf (EMMysticism >= 75)
+							Let EMME := EMME4
+						ElseIf (EMMysticism >= 50)
+							Let EMME := EMME3
+						ElseIf (EMMysticism >= 25)
+							Let EMME := EMME2
+						ElseIf (EMMysticism >= 0)
+							Let EMME := EMME1
+						EndIf
+						Let EMNewEnchantments := GetMagicItemEffectCount EMTempEnchantment
+						If (EMNewEnchantments <= EMME)
+							Let EMSuccess := 1
+						Else
+							Let EMSuccessCalc := EMNewEnchantments - EMME + 1
+							Let EMSuccessCalc := Pow EMSuccessCalc EMCH
+							Let EMSuccessCalc := EMSuccessCalc * (Rand 0 100)
+							If (EMSuccessCalc > 200) ; Failure
+								Let EMSuccessCalc := Rand 0 100
+								If (EMSuccessCalc >= EMTH1)
+									Let EMSuccess := 4
+								ElseIf (EMSuccessCalc >= EMTH2)
+									Let EMSuccess := 3
+								Else
+									Let EMSuccess := 2
+								EndIf
+							Else ; Success
+								Let EMSuccess := 1
+							EndIf
+						EndIf
+					Else
+						Let EMSuccess := 1
+					EndIf
+					Player.RemoveItemNS EMTempItem 99999
+					Let EMNewCounter := EMProperties[EMItemCounter]["count"]
+					If eval (EMProperties[EMItemCounter]["quest"] == 1)
+						SetQuestItem 1 EMTempItem
+						SetQuestItem 1 EMNewItem
+					EndIf
+					Player.AddItemNS EMTempItem EMNewCounter
+					Player.RemoveItemNS EMTempItem EMArrowNumber
+					Player.RemoveItemNS EMNewItem 1
+					Let EMNewEnchantment := GetEnchantment EMNewItem
+					If (MagicItemHasEffect "DARK" EMNewEnchantment)
+						If (EMSuccess == 1 || EMSuccess == 2)
+							Let EMSuccess := -1
+						ElseIf (EMSuccess == 3)
+							Let EMSuccess := 2
+						EndIf
+					EndIf
+					If eval (EMProperties[EMItemCounter]["quest"] == 1)
+						SetQuestItem 1 EMTempItem
+						SetQuestItem 1 EMNewItem
+					EndIf
+					If (EMSuccess == 1)	; Success
+						Player.AddItemNS EMNewItem EMArrowNumber
+					ElseIf (EMSuccess == 2)	; Failure (Loss of Soul Stone)
+						Player.AddItemNS EMTempItem EMArrowNumber
+					ElseIf (EMSuccess == 3 || EMSuccess == -1)	; Failure (Loss of Enchantment) / Disenchant
+						RemoveEnchantment EMNewItem
+						Player.AddItemNS EMNewItem EMArrowNumber
+					EndIf
+					If (EMDEBUG == 1)
+						Print "Enchantment Mastery: Multiple Effects Successfully Merged!"
+					EndIf
+				ElseIf (EMCE == 1 && EMConstantItem != 0 && EMConstantItemAmount == 0)
+					If (EMDEBUG == 1)
+						Let EMTempEffectName := GetName EMTempItem
+						Print "Enchantment Mastery: Merging Constant Effect Unto Weapon " + EMTempEffectName
+					EndIf
+					Player.RemoveItemNS EMNewItem 1
+					Let EMNewItem := GetLastEnchantedItem
+					Let EMNewEnchantment := GetEnchantment EMNewItem
+					Let EMTempEnchantment := EMProperties[EMItemCounter]["enchantment"]
+					Let EMConstantItem := EnchantmentMasteryWeapon
+					Let EMConstantItem := CloneForm EMConstantItem
+					Let EMTempEffectCode := GetNthEffectItemCode EMNewEnchantment 0
+					Let EMTempEffectActorValue := GetNthEffectItemActorValue EMTempEnchantment EMTempCounter
+					Let EMMagnitudeTemp := GetNthEffectItemMagnitude EMNewEnchantment 0
+					Let EMAreaTemp := GetNthEffectItemArea EMNewEnchantment 0
+					Let EMTempCounter := 0
+					While (EMTempCounter < EMNumberOfItems)
+						Let EMWeaponEffect := EMItems[EMTempCounter]
+						Let EMTempEffectName := GetName EMTempItem
+						Let EMNewEffectName := GetName EMWeaponEffect
+						Let EMIdenticalEffect := sv_Compare "%z" EMTempEffectName EMNewEffectName
+						If (EMTempItem != EMWeaponEffect && EMIdenticalEffect == 0)
+							If (EMDEBUG == 1)
+								Print "Enchantment Mastery: Found A Constant Effect For This Item!"
+							EndIf
+							CopyName EMNewItem EMWeaponEffect
+							Let EMScriptEnchantment := GetEnchantment EMWeaponEffect
+							Let EMNewEffectCode := GetNthEffectItemCode EMScriptEnchantment 0
+							Let EMNewEffectName := GetNthEffectItemName EMScriptEnchantment 0
+							Let EMTempEffectName := GetNthEffectItemName EMNewEnchantment 0
+							Let EMIdenticalEffect := sv_Compare "%z" EMTempEffectName EMNewEffectName
+							If (EMNewEffectCode == EMTempEffectCode && EMIdenticalEffect == 0)
+								If (EMDEBUG == 1)
+									Print "Enchantment Mastery: Merging Similar Constant Effects!"
+								EndIf
+								Let EMMagnitudeTemp := (EMMM / 100.0) * EMMagnitudeTemp
+								ModNthEffectItemMagnitude EMMagnitudeTemp EMScriptEnchantment 0
+								ModNthEffectItemArea EMAreaTemp EMScriptEnchantment 0
+								Player.RemoveItemNS EMNewItem 1
+								Player.UnequipItemNS EMWeaponEffect 1
+							EndIf
+						EndIf
+						Let EMNewEffectName := GetName EMNewItem
+						Let EMTempEffectName := GetName EMTempItem
+						Let EMIdenticalEffect := sv_Compare "%z" EMTempEffectName EMNewEffectName
+						If (EMIdenticalEffect != 0)
+							Let EMNewEffectName := GetName EMWeaponEffect
+							Let EMTempEffectName := GetName EMNewItem
+							Let EMIdenticalEffect := sv_Compare "%z" EMTempEffectName EMNewEffectName
+						Else
+							Let EMIdenticalEffect := -2
+						EndIf
+						If (EMNewItem != EMWeaponEffect && EMIdenticalEffect == 0)
+							AppendToName " (2)" EMNewItem
+							MessageBox "A weapon with constant enchantments by this name already exits. A (2) will be appended to the new name."
+						EndIf
+						Let EMTempCounter := EMTempCounter + 1
+					Loop
+					Let EMTempEffectName := GetNthEffectItemName EMNewEnchantment 0
+					CopyName EMNewItem EMConstantItem
+					CopyIconPath EMTempItem EMConstantItem
+					CopyMaleIconPath EMTempItem EMConstantItem
+					CopyFemaleIconPath EMTempItem EMConstantItem
+					CopyModelPath EMTempItem EMConstantItem
+					CopyMaleBipedPath EMTempItem EMConstantItem
+					CopyFemaleBipedPath EMTempItem EMConstantItem
+					CopyMaleGroundPath EMTempItem EMConstantItem
+					CopyFemaleGroundPath EMTempItem EMConstantItem
+					Let EMSlotMask := 0
+					Let EMSlotMask := GetBipedSlotMask EMTempItem
+					SetBipedSlotMask EMSlotMask EMConstantItem
+					Let EMWeaponDamage := GetAttackDamage EMTempItem
+					SetAttackDamage EMWeaponDamage EMConstantItem
+					Let EMWeaponIgnores := GetIgnoresResistance EMTempItem
+					SetIgnoresResistance EMWeaponIgnores EMConstantItem
+					Let EMWeaponSpeed := GetWeaponSpeed EMTempItem
+					SetWeaponSpeed EMWeaponSpeed EMConstantItem
+					Let EMWeaponReach := GetWeaponReach EMTempItem
+					SetWeaponReach EMWeaponReach EMConstantItem
+					Let EMWeaponType := GetWeaponType EMTempItem
+					SetWeaponType EMWeaponType EMConstantItem
+					Let EMWeaponWeight := GetWeight EMTempItem
+					SetWeight EMWeaponWeight EMConstantItem
+					Let EMWeaponValue := GetGoldValue EMTempItem
+					SetGoldValue EMWeaponValue EMConstantItem
+					Let EMWeaponHealth := GetObjectHealth EMTempItem
+					SetObjectHealth EMWeaponHealth EMConstantItem
+					Let EMWeaponDamage := GetNthEffectItemActorValue EMNewEnchantment 0
+					Let EMTempCharge := EMProperties[EMItemCounter]["charge"]
+					Let EMNewEnchantment := CloneForm EMTempEnchantment
+					If (EMTempEnchantment == 0)
+						Let EMTempCharge := GetObjectCharge EMNewItem
+						Let EMTempCharge := EMTempCharge / 2
+						Let EMNewEnchantment := EnchantmentMasteryBlankWeaponEnchantment
+						Let EMNewEnchantment := CloneForm EMNewEnchantment
+						If (EMWeaponType == 4) ; Staff
+							SetEnchantmentType 1 EMNewEnchantment
+						Else ; Weapon
+							SetEnchantmentType 2 EMNewEnchantment
+						EndIf
+					EndIf
+					SetObjectCharge EMTempCharge EMConstantItem
+					RemoveAllEffectItems EMNewEnchantment
+					Let EMMerged := 0
+					If (MagicItemHasEffectCode EMTempEffectCode EMTempEnchantment == 1)
+						Let EMNewCounter := 0
+						Let EMNewEnchantments := GetMagicItemEffectCount EMTempEnchantment
+						While (EMNewCounter < EMNewEnchantments)
+							Let EMNewEffectCode := GetNthEffectItemCode EMTempEnchantment EMNewCounter
+							Let EMNewEffectName := GetNthEffectItemName EMTempEnchantment EMNewCounter
+							Let EMNewEffectActorValue := GetNthEffectItemActorValue EMTempEnchantment EMNewCounter ; this line is added
+							Let EMIdenticalEffect := sv_Compare "%z" EMTempEffectName EMNewEffectName
+							If (EMNewEffectCode == EMTempEffectCode && EMNewEffectActorValue == EMTempEffectActorValue) ; && EMIdenticalEffect == 0
+								If (EMMagnitudeTemp > 0 || EMAreaTemp > 0)
+									ModNthEffectItemMagnitude EMMagnitudeTemp EMTempEnchantment EMNewCounter
+									ModNthEffectItemArea EMAreaTemp EMTempEnchantment EMNewCounter
+									SetNthEffectItemActorValueC EMNewEffectActorValue EMTempEnchantment EMNewCounter
+									;Let EMMerged := AddFullEffectItemC EMScriptEffectCode 0 0 0 0 EMTempEnchantment
+									;SetNthEffectItemscriptName "Combined Enchantments" EMTempEnchantment EMMerged
+								EndIf
+								Let EMMerged := 1
+							EndIf
+							Let EMNewCounter := EMNewCounter + 1
+						Loop
+					EndIf
+					If (EMMerged == 0)
+						Let EMMerged := AddFullEffectItemC EMTempEffectCode EMMagnitudeTemp EMAreaTemp 0 0 EMNewEnchantment
+						SetNthEffectItemActorValueC EMWeaponDamage EMNewEnchantment EMMerged
+					EndIf
+					CopyAllEffectItems EMTempEnchantment EMNewEnchantment
+					SetEnchantment EMNewEnchantment EMConstantItem
+					SetIsPlayable 0 EMNewItem
+					Player.RemoveItemNS EMTempItem 1
+					Let EMTempItem := CloneForm EMConstantItem
+					If (EMDM == 1)
+						If (EMDEBUG == 1)
+							Print "Enchantment Mastery: Testing For Success!"
+						EndIf
+						If (EMMysticism >= 100)
+							Let EMME := EMME5
+						ElseIf (EMMysticism >= 75)
+							Let EMME := EMME4
+						ElseIf (EMMysticism >= 50)
+							Let EMME := EMME3
+						ElseIf (EMMysticism >= 25)
+							Let EMME := EMME2
+						ElseIf (EMMysticism >= 0)
+							Let EMME := EMME1
+						EndIf
+						Let EMNewEnchantments := GetMagicItemEffectCount EMTempEnchantment
+						If (EMNewEnchantments <= EMME)
+							Let EMSuccess := 1
+						Else
+							Let EMSuccessCalc := EMNewEnchantments - EMME + 1
+							Let EMSuccessCalc := Pow EMSuccessCalc EMCH
+							Let EMSuccessCalc := EMSuccessCalc * (Rand 0 100)
+							If (EMSuccessCalc > 200) ; Failure
+								Let EMSuccessCalc := Rand 0 100
+								If (EMSuccessCalc >= EMTH1)
+									Let EMSuccess := 4
+								ElseIf (EMSuccessCalc >= EMTH2)
+									Let EMSuccess := 3
+								Else
+									Let EMSuccess := 2
+								EndIf
+							Else ; Success
+								Let EMSuccess := 1
+							EndIf
+						EndIf
+					Else
+						Let EMSuccess := 1
+					EndIf
+					Let EMTempEnchantment := GetEnchantment EMTempItem
+					If (MagicItemHasEffect "DARK" EMTempEnchantment)
+						If (EMSuccess == 1 || EMSuccess == 2)
+							Let EMSuccess := -1
+						ElseIf (EMSuccess == 3)
+							Let EMSuccess := 2
+						EndIf
+					EndIf
+
+					If (EMSuccess == 1)	; Success
+						If eval (EMProperties[EMItemCounter]["quest"] == 1)
+							SetQuestItem 1 EMTempItem
+							SetQuestItem 1 EMNewItem
+						EndIf
+						Player.AddItemNS EMTempItem 1
+					ElseIf (EMSuccess == 2)	; Failure (Loss of Soul Stone)
+						Let EMTempItem := EMItems[EMItemCounter]
+						If eval (EMProperties[EMItemCounter]["quest"] == 1)
+							SetQuestItem 1 EMTempItem
+							SetQuestItem 1 EMNewItem
+						EndIf
+						Player.AddItemNS EMTempItem 1
+					ElseIf (EMSuccess == 3 || EMSuccess == -1)	; Failure (Loss of Enchantment) / Disenchant
+						RemoveEnchantment EMTempItem
+						If eval (EMProperties[EMItemCounter]["quest"] == 1)
+							SetQuestItem 1 EMTempItem
+							SetQuestItem 1 EMNewItem
+						EndIf
+						Player.AddItemNS EMTempItem 1
+					EndIf
+				Else
+					If (EMDEBUG == 1)
+						Let EMTempEffectName := GetName EMTempItem
+						Print "Enchantment Mastery: Merging Unchanged Item " + EMTempEffectName
+					EndIf
+					Player.RemoveItemNS EMConstantItem 1
+					Player.RemoveItemNS EMNewItem 1
+					If eval (EMProperties[EMItemCounter]["clean"] == 1)
+						If eval (EMProperties[EMItemCounter]["quest"] == 1)
+							SetQuestItem 1 EMTempItem
+							SetQuestItem 1 EMNewItem
+						EndIf
+						Player.AddItemNS EMTempItem 1
+						If (EMEA == 1 && IsAmmo EMTempItem)
+							Player.RemoveItemNS EMTempItem 1
+						EndIf
+					EndIf
+				EndIf
+			EndIf
+			Let EMItemCounter := EMItemCounter + 1
+		Loop
+		Player.RemoveSpellNS EnchantmentMasteryDisenchantSpell
+		Let EMDisenchantEffect1 := MagicEffectFromChars "DARK"
+		SetMagicEffectName EMDisenchantEffectName EMDisenchantEffect1
+		SetMagicEffectForEnchanting EMDisenchantEffectEnchanting EMDisenchantEffect1
+		SetMagicEffectNoMagnitude EMDisenchantEffectMagnitude EMDisenchantEffect1
+		SetMagicEffectNoDuration EMDisenchantEffectDuration EMDisenchantEffect1
+		SetMagicEffectNoArea EMDisenchantEffectArea EMDisenchantEffect1
+		SetMagicEffectIcon EMDisenchantEffectIcon EMDisenchantEffect1
+		SetMagicEffectModel EMDisenchantEffectModel EMDisenchantEffect1
+		set EMTempEffectName to sv_Destruct
+		set EMNewEffectName to sv_Destruct
+		set EMDisenchantEffectName to sv_Destruct
+		set EMDisenchantEffectIcon to sv_Destruct
+		set EMDisenchantEffectModel to sv_Destruct
+		ar_Erase EMProperties ; clearing properties array to prevent save bloat
+		Let EMTempItem := EnchantmentMasteryWeapon
+		Let EMNewItem := EnchantmentMasteryWeapon ; clear these out by setting to neutral values
+		Let EMRevertItems := 0
+		Let EMReady := 0
+		set fQuestDelayTime to 0.5
+		EnableMouse
+		EnablePlayerControls
+		If (EMDEBUG == 1)
+			Print "Enchantment Mastery: Items Merged!"
+		EndIf
+		;If (EMSuccess == -1)
+			;Message "EM: Disenchantment Successful!"
+		;ElseIf (EMSuccess == 0)
+			;Message "EM: Enchantment Canceled!"
+		;ElseIf (EMSuccess == 1)
+			;Message "EM: Enchantment Successful!"
+		;ElseIf (EMSuccess == 2)
+			;Message "EM: Enchantment Failed! The Soul Stone Has Been Destroyed!"
+		;ElseIf (EMSuccess == 3)
+			;Message "EM: Enchantment Failed! The Item Has Been Disenchanted!!"
+		;ElseIf (EMSuccess == 4)
+			;Message "EM: Enchantment Failed! The Item Has Been Destroyed!!!"
+		;EndIf
+	EndIf
+End
